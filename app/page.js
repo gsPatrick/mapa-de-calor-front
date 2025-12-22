@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Sidebar from '../components/Sidebar/Sidebar';
@@ -12,7 +12,8 @@ const Map = dynamic(() => import('../components/Map/Map'), {
   loading: () => <div className={styles.loading}>Carregando Mapa...</div>
 });
 
-export default function Home() {
+// Main Content Component
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -178,6 +179,17 @@ export default function Home() {
         />
       </div>
     </main>
+  );
+}
+
+// Wrapper with Suspense for Vercel Build (SSR + searchParams)
+// Wrapper with Suspense for Vercel Build (SSR + searchParams)
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando App...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
 
