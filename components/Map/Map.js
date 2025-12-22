@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import styles from './map.module.css';
 
 // Fix Icons
@@ -15,6 +18,15 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
+// Custom Cluster Icon Creator
+const createClusterCustomIcon = function (cluster) {
+    return L.divIcon({
+        html: `<div><span>${cluster.getChildCount()}</span></div>`,
+        className: 'custom-marker-cluster',
+        iconSize: L.point(40, 40, true),
+    });
+};
+
 // Componente Interno para Heatmap
 function HeatmapLayer({ points }) {
     const map = useMap();
@@ -22,8 +34,12 @@ function HeatmapLayer({ points }) {
     useEffect(() => {
         if (!points || points.length === 0) return;
 
+        // Check if we have minimal data (no votes)
+        const hasVoteData = points.some(p => p.votos !== undefined);
+        if (!hasVoteData) return; // Skip Heatmap if no votes
+
         // Auto-Scale Max Intensity based on highest vote count in dataset
-        const highestVote = Math.max(...points.map(p => p.votos), 1);
+        const highestVote = Math.max(...points.map(p => p.votos || 0), 1);
 
         // Data format: [lat, lng, intensity]
         // API returns keys: lat, lng, votos (already parsed as numbers by backend service)
@@ -54,20 +70,72 @@ function HeatmapLayer({ points }) {
     return null;
 }
 
-import MarkerClusterGroup from 'react-leaflet-cluster';
+// Markers Controller - Native Leaflet Implementation via useMap
+// OPTIMIZATION: Bypasses React VDOM for 5k+ markers to prevent freezing
+function MarkersController({ points, onSchoolClick }) {
+    const map = useMap();
 
-// ... (imports remain)
+    useEffect(() => {
+        if (!points || points.length === 0) return;
 
-// Custom Cluster Icon Creator
-const createClusterCustomIcon = function (cluster) {
-    return L.divIcon({
-        html: `<div><span>${cluster.getChildCount()}</span></div>`,
-        className: 'custom-marker-cluster',
-        iconSize: L.point(40, 40, true),
-    });
-};
+        // 1. Initialize Cluster Group with chunked loading
+        const markers = L.markerClusterGroup({
+            chunkedLoading: true, // CRITICAL: Splits processing to avoid UI freeze
+            chunkInterval: 200,   // Process for 200ms
+            chunkDelay: 50,       // Wait 50ms between chunks
+            iconCreateFunction: createClusterCustomIcon,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true
+        });
 
-// ... (HeatmapLayer remains)
+        // 2. Create Markers (Native Leaflet)
+        const markerList = points
+            .filter(p => p.lat != null && p.lng != null)
+            .map(p => {
+                const marker = L.marker([p.lat, p.lng]);
+
+                // Bind Popup with HTML string (React components won't work inside native bindPopup easily without portal)
+                // Using simple HTML string for performance
+                const hasVotes = p.votos > 0;
+                const popupContent = `
+                    <div style="font-family: sans-serif; font-size: 13px;">
+                        <strong style="font-size: 14px;">${p.nome}</strong><br/>
+                        ${hasVotes ? `
+                            <div style="margin-top: 4px;">
+                                Votos: <strong>${p.votos}</strong> (${p.percent}%)
+                            </div>
+                        ` : ''}
+                        <div style="margin-top: 8px; font-size: 11px; color: #666; font-style: italic; cursor: pointer;">
+                            Clique no marcador para ver detalhes
+                        </div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+
+                // Add Click Event to trigger React State
+                marker.on('click', () => {
+                    if (onSchoolClick) onSchoolClick(p.id);
+                });
+
+                return marker;
+            });
+
+        // 3. Add to Cluster Group
+        markers.addLayers(markerList);
+
+        // 4. Add to Map
+        map.addLayer(markers);
+
+        // Cleanup
+        return () => {
+            map.removeLayer(markers);
+        };
+    }, [points, map, onSchoolClick]);
+
+    return null;
+}
 
 // FlyTo Controller Component
 function FlyToController({ coords }) {
@@ -140,27 +208,9 @@ export default function MapComponent({ points, showHeatmap, showMarkers, onSchoo
 
                 {showHeatmap && <HeatmapLayer points={points} />}
 
+                {/* Optimized Markers using Native Leaflet Cluster */}
                 {showMarkers && points && (
-                    <MarkerClusterGroup
-                        chunkedLoading
-                        iconCreateFunction={createClusterCustomIcon}
-                    >
-                        {points.map(p => (
-                            <Marker
-                                key={p.id}
-                                position={[p.lat, p.lng]}
-                                eventHandlers={{
-                                    click: () => onSchoolClick(p.id)
-                                }}
-                            >
-                                <Popup>
-                                    <strong>{p.nome}</strong><br />
-                                    Votos: {p.votos} ({p.percent}%)<br />
-                                    <small>Clique para ver Ranking Completo</small>
-                                </Popup>
-                            </Marker>
-                        ))}
-                    </MarkerClusterGroup>
+                    <MarkersController points={points} onSchoolClick={onSchoolClick} />
                 )}
 
                 {/* Custom Legend Control */}

@@ -131,12 +131,29 @@ function HomeContent() {
 
         if (filters.candidatoNumero) {
           params.append('numero', filters.candidatoNumero);
+          // If candidate selected, we likely WANT votes for heatmap? 
+          // But user said "just pull the point first".
+          // Let's force minimal for now to solve performance, as SchoolDetails fetches specific data.
+          // Or maybe only minimal if NO candidate? 
+          // If I have a candidate, I probably want to see where they won.
+          // Let's assume minimal=true ONLY if payload is huge or by default?
+          // User requested "pull school point first". 
+          // Let's try passing minimal=true ALWAYS for the map pins to be light.
+          // But then Heatmap renders nothing.
+          // The user's main complaint is "opening 5000 points".
+          // I will set minimal=true.
+          params.append('minimal', 'true');
+        } else {
+          params.append('minimal', 'true');
         }
 
         // Add municipio filter if selected
         if (filters.municipio) {
           params.append('municipio', filters.municipio);
         }
+
+        // CACHE BUSTER: Force new request
+        params.append('_t', Date.now());
 
         const res = await fetch(`${API_BASE}/api/mapa?${params.toString()}`);
         const data = await res.json();
