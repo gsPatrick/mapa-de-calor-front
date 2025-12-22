@@ -14,7 +14,7 @@
     "next": "15.1.0",
     "react": "19.0.0",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "19.2.3",
+    "react-dom": "19.0.0",
     "react-leaflet": "^5.0.0",
     "react-leaflet-cluster": "^4.0.0",
     "react-select": "^5.10.2"
