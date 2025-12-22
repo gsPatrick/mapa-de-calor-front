@@ -1,0 +1,362 @@
+/* Header Premium */
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px 20px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.headerTitle {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    font-weight: 700;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.headerSubtitle {
+    font-size: 14px;
+    opacity: 0.9;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+}
+
+/* Scroll Area */
+.scrollArea {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 20px;
+    background: #f8f9fa;
+}
+
+/* Stats Cards (Resumo Executivo) */
+.resumoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.metricCard {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: center;
+}
+
+.metricCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.metricIcon {
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+.metricValue {
+    font-size: 24px;
+    /* Reduced slightly for layout */
+    font-weight: 700;
+    font-family: 'Roboto Mono', monospace;
+    color: #212121;
+    margin: 0;
+}
+
+.metricLabel {
+    font-size: 11px;
+    color: #757575;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 4px 0 0 0;
+}
+
+/* Section Common */
+.sidebarSection {
+    margin: 0 20px 16px 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #212121;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Top Candidates */
+.topCandidates {
+    padding: 20px;
+    background: white;
+    margin-bottom: 20px;
+    /* Spacer */
+}
+
+.candidatoItem {
+    margin-bottom: 12px;
+}
+
+.candidatoHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.candidatoNome {
+    font-size: 13px;
+    font-weight: 600;
+    color: #212121;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.candidatoStats {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #757575;
+}
+
+.candidatoVotos {
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 600;
+}
+
+.candidatoPercentual {
+    color: #1976D2;
+    font-weight: 700;
+}
+
+.progressBarContainer {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #1976D2 0%, #4CAF50 100%);
+    border-radius: 4px;
+    position: relative;
+}
+
+/* Filtros Avançados */
+.filterGroup {
+    margin-bottom: 12px;
+}
+
+.filterLabel {
+    display: block;
+    font-size: 11px;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+/* React Select Overrides via global or specific class - handled in JS usually, but here for container */
+.resetBtn {
+    width: 100%;
+    padding: 10px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #495057;
+    transition: all 0.2s ease;
+}
+
+.resetBtn:hover {
+    background: #e9ecef;
+}
+
+/* Actions */
+.acoesGrid {
+    padding: 0 20px 20px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.btnAcao {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btnPrimary {
+    background: #1976D2;
+    color: white;
+}
+
+.btnPrimary:hover {
+    background: #1565C0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btnSecondary {
+    background: white;
+    border: 2px solid #e0e0e0;
+    color: #212121;
+}
+
+.btnSecondary:hover {
+    border-color: #1976D2;
+    color: #1976D2;
+}
+
+/* Insights */
+.insights {
+    padding: 20px;
+    background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+    margin: 0 20px 20px 20px;
+    border-radius: 12px;
+    border-left: 4px solid #FF9800;
+}
+
+.insightItem {
+    font-size: 13px;
+    color: #212121;
+    margin: 8px 0;
+    display: flex;
+    align-items: start;
+    gap: 8px;
+}
+
+/* Layer Control */
+.layerControl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.layerBtn {
+    padding: 8px 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    color: #495057;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.layerBtnActive {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Search & Compare */
+.inputField {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.compareBtn {
+    width: 100%;
+    padding: 10px;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+/* Footer */
+.footer {
+    padding: 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    font-size: 11px;
+    color: #757575;
+    text-align: center;
+}
+
+/* Layout Main */
+.sidebar {
+    width: 400px;
+    height: 100vh;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.sidebarHidden {
+    display: none;
+}
+
+
+/* Toggle Button (Mobile) - if needed */
+.toggleBtn {
+    position: absolute;
+    top: 20px;
+    right: -40px;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 0 8px 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+    color: #1976D2;
+    z-index: 1001;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 50vh;
+        position: absolute;
+        bottom: 0;
+        top: auto;
+        border-right: none;
+        border-top: 1px solid #e2e8f0;
+    }
+}
