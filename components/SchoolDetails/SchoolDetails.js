@@ -31,7 +31,7 @@ export default function SchoolDetails({ schoolId, onClose, selectedCandidateNum 
             setLoading(true);
             try {
                 // Fetch with Cargo Param
-                const res = await fetch(`http://localhost:3001/api/escolas/${schoolId}?cargo=${activeTab}`);
+                const res = await fetch(`https://geral-mapadecalorapi.r954jc.easypanel.host/api/escolas/${schoolId}?cargo=${activeTab}`);
                 if (!res.ok) throw new Error('Falha ao buscar escola');
                 const json = await res.json();
                 setData(json);

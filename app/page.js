@@ -12,6 +12,8 @@ const Map = dynamic(() => import('../components/Map/Map'), {
   loading: () => <div className={styles.loading}>Carregando Mapa...</div>
 });
 
+const API_BASE = 'https://geral-mapadecalorapi.r954jc.easypanel.host';
+
 // Main Content Component
 function HomeContent() {
   const router = useRouter();
@@ -136,7 +138,7 @@ function HomeContent() {
           params.append('municipio', filters.municipio);
         }
 
-        const res = await fetch(`http://localhost:3001/api/mapa?${params.toString()}`);
+        const res = await fetch(`${API_BASE}/api/mapa?${params.toString()}`);
         const data = await res.json();
 
         const total = data.reduce((acc, curr) => acc + curr.votos, 0);

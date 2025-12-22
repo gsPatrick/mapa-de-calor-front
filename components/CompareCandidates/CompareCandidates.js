@@ -19,7 +19,7 @@ export default function CompareCandidatesModal({ isOpen, onClose, candidatosOpti
     }, [isOpen]);
 
     const fetchCandidateData = async (numero) => {
-        const res = await fetch(`http://localhost:3001/api/mapa?cargo=${cargo}&numero=${numero}`);
+        const res = await fetch(`https://geral-mapadecalorapi.r954jc.easypanel.host/api/mapa?cargo=${cargo}&numero=${numero}`);
         const data = await res.json();
         const total = data.reduce((acc, curr) => acc + curr.votos, 0);
         const percent = data.reduce((acc, curr) => acc + curr.total_local, 0);

@@ -7,6 +7,8 @@ import styles from './sidebar.module.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+const API_BASE = 'https://geral-mapadecalorapi.r954jc.easypanel.host';
+
 // Custom Styles for React Select to match the light theme
 const customStyles = {
     control: (provided) => ({
@@ -38,7 +40,7 @@ function ComparadorSection({ initialAno, cargo }) {
     // Load options for Year 1
     useEffect(() => {
         async function load1() {
-            const res = await fetch(`http://localhost:3001/api/filtros?ano=${year1}`);
+            const res = await fetch(`${API_BASE}/api/filtros?ano=${year1}`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setOptions1(data.map(c => ({ value: c.candidato_numero, label: `${c.candidato_nome} (${c.partido_sigla})` })));
@@ -50,7 +52,7 @@ function ComparadorSection({ initialAno, cargo }) {
     // Load options for Year 2
     useEffect(() => {
         async function load2() {
-            const res = await fetch(`http://localhost:3001/api/filtros?ano=${year2}`);
+            const res = await fetch(`${API_BASE}/api/filtros?ano=${year2}`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setOptions2(data.map(c => ({ value: c.candidato_numero, label: `${c.candidato_nome} (${c.partido_sigla})` })));
@@ -65,8 +67,8 @@ function ComparadorSection({ initialAno, cargo }) {
         setResult(null);
         try {
             const [res1, res2] = await Promise.all([
-                fetch(`http://localhost:3001/api/mapa?ano=${year1}&cargo=${cargo}&numero=${cand1}`),
-                fetch(`http://localhost:3001/api/mapa?ano=${year2}&cargo=${cargo}&numero=${cand2}`)
+                fetch(`${API_BASE}/api/mapa?ano=${year1}&cargo=${cargo}&numero=${cand1}`),
+                fetch(`${API_BASE}/api/mapa?ano=${year2}&cargo=${cargo}&numero=${cand2}`)
             ]);
             const [d1, d2] = await Promise.all([res1.json(), res2.json()]);
 
@@ -213,7 +215,7 @@ export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSe
         async function loadOptions() {
             try {
                 // Candidatos - filtered by year
-                const resFiltros = await fetch(`http://localhost:3001/api/filtros?ano=${filters.ano}`);
+                const resFiltros = await fetch(`${API_BASE}/api/filtros?ano=${filters.ano}`);
                 const dataFiltros = await resFiltros.json();
                 if (Array.isArray(dataFiltros)) {
                     setCandidatosOptions(dataFiltros.map(c => ({
@@ -224,7 +226,7 @@ export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSe
                 }
 
                 // Municipios (same for all years)
-                const resMuni = await fetch('http://localhost:3001/api/municipios');
+                const resMuni = await fetch(`${API_BASE}/api/municipios`);
                 const dataMuni = await resMuni.json();
                 if (Array.isArray(dataMuni)) {
                     setMunicipiosOptions([
@@ -250,7 +252,7 @@ export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSe
             // if (filters.candidatoNum) ... (Filtered stats by candidate? Maybe not necessary for general dashboard unless selected)
 
             try {
-                const res = await fetch(`http://localhost:3001/api/stats?${params.toString()}`);
+                const res = await fetch(`${API_BASE}/api/stats?${params.toString()}`);
                 const data = await res.json();
                 setStats(data);
             } catch (err) {
@@ -279,7 +281,7 @@ export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSe
         }
         setIsSearching(true);
         try {
-            const res = await fetch(`http://localhost:3001/api/escolas/busca?q=${encodeURIComponent(term)}`);
+            const res = await fetch(`${API_BASE}/api/escolas/busca?q=${encodeURIComponent(term)}`);
             const data = await res.json();
             setSearchResults(Array.isArray(data) ? data : []);
         } catch (err) {
