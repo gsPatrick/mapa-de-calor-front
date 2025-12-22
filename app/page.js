@@ -39,6 +39,25 @@ function HomeContent() {
   // Comparador State
   const [showComparador, setShowComparador] = useState(false);
 
+  // REDIRECT TO DEFAULT VIEW IF EMPTY
+  useEffect(() => {
+    if (!filters.candidatoNumero) {
+      // If no candidate selected, redirect to default (Bolsonaro 2022) to show populated map
+      const defaultParams = new URLSearchParams();
+      defaultParams.set('ano', '2022');
+      defaultParams.set('cargo', 'PRESIDENTE');
+      defaultParams.set('candidato', '22'); // Bolsonaro
+      // Preserve other filters if any
+      if (filters.municipio) defaultParams.set('municipio', filters.municipio);
+
+      const newUrl = `${window.location.pathname}?${defaultParams.toString()}`;
+      router.replace(newUrl);
+
+      // Update local state to reflect redirect immediately
+      setFilters(prev => ({ ...prev, ano: 2022, cargo: 'PRESIDENTE', candidatoNumero: 22 }));
+    }
+  }, []); // Run once on mount
+
   // Update URL when filters change (Deep Linking)
   useEffect(() => {
     const params = new URLSearchParams();
