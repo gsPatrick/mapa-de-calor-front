@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './login.module.css';
 
@@ -8,17 +8,41 @@ const API_BASE = 'https://geral-mapadecalorapi.r954jc.easypanel.host';
 
 export default function LoginPage() {
     const router = useRouter();
-    const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [checkingAuth, setCheckingAuth] = useState(true);
 
     const [formData, setFormData] = useState({
-        nome: '',
         email: '',
-        senha: '',
-        confirmarSenha: ''
+        senha: ''
     });
+
+    // Check if already logged in
+    useEffect(() => {
+        const token = localStorage.getItem('mapaeleitoral_token');
+        if (token) {
+            // Verify token is still valid
+            fetch(`${API_BASE}/api/auth/verify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valid) {
+                        router.push('/mapa');
+                    } else {
+                        localStorage.removeItem('mapaeleitoral_token');
+                        localStorage.removeItem('mapaeleitoral_user');
+                        setCheckingAuth(false);
+                    }
+                })
+                .catch(() => setCheckingAuth(false));
+        } else {
+            setCheckingAuth(false);
+        }
+    }, [router]);
 
     const handleChange = (e) => {
         setFormData(prev => ({
@@ -35,25 +59,16 @@ export default function LoginPage() {
         setSuccess('');
 
         try {
-            if (!isLogin && formData.senha !== formData.confirmarSenha) {
-                throw new Error('As senhas não coincidem');
-            }
-
-            const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-            const body = isLogin
-                ? { email: formData.email, senha: formData.senha }
-                : { nome: formData.nome, email: formData.email, senha: formData.senha };
-
-            const res = await fetch(`${API_BASE}${endpoint}`, {
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
+                body: JSON.stringify({ email: formData.email, senha: formData.senha })
             });
 
             const data = await res.json();
 
             if (!res.ok) {
-                throw new Error(data.error || 'Erro ao processar requisição');
+                throw new Error(data.error || 'Credenciais inválidas');
             }
 
             // Save token to localStorage
@@ -62,24 +77,27 @@ export default function LoginPage() {
                 localStorage.setItem('mapaeleitoral_user', JSON.stringify(data.user));
             }
 
-            if (isLogin) {
-                setSuccess('Login realizado com sucesso! Redirecionando...');
-                setTimeout(() => {
-                    router.push('/admin');
-                }, 1500);
-            } else {
-                setSuccess('Conta criada com sucesso! Faça login para continuar.');
-                setTimeout(() => {
-                    setIsLogin(true);
-                    setFormData(prev => ({ ...prev, nome: '', confirmarSenha: '' }));
-                }, 2000);
-            }
+            setSuccess('Login realizado com sucesso! Entrando...');
+            setTimeout(() => {
+                router.push('/mapa');
+            }, 800);
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
     };
+
+    if (checkingAuth) {
+        return (
+            <div className={styles.container}>
+                <div className={styles.loading}>
+                    <div className={styles.spinner}></div>
+                    <span>Verificando autenticação...</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.container}>
@@ -92,26 +110,11 @@ export default function LoginPage() {
                         <h1>Mapa Eleitoral RJ</h1>
                     </div>
                     <p className={styles.subtitle}>
-                        {isLogin ? 'Acesse o painel administrativo' : 'Crie sua conta'}
+                        Sistema de Inteligência Política
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
-                    {!isLogin && (
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="nome">Nome Completo</label>
-                            <input
-                                type="text"
-                                id="nome"
-                                name="nome"
-                                value={formData.nome}
-                                onChange={handleChange}
-                                placeholder="Digite seu nome"
-                                required={!isLogin}
-                            />
-                        </div>
-                    )}
-
                     <div className={styles.inputGroup}>
                         <label htmlFor="email">Email</label>
                         <input
@@ -121,6 +124,7 @@ export default function LoginPage() {
                             value={formData.email}
                             onChange={handleChange}
                             placeholder="seu@email.com"
+                            autoComplete="email"
                             required
                         />
                     </div>
@@ -134,25 +138,10 @@ export default function LoginPage() {
                             value={formData.senha}
                             onChange={handleChange}
                             placeholder="••••••••"
-                            minLength={6}
+                            autoComplete="current-password"
                             required
                         />
                     </div>
-
-                    {!isLogin && (
-                        <div className={styles.inputGroup}>
-                            <label htmlFor="confirmarSenha">Confirmar Senha</label>
-                            <input
-                                type="password"
-                                id="confirmarSenha"
-                                name="confirmarSenha"
-                                value={formData.confirmarSenha}
-                                onChange={handleChange}
-                                placeholder="••••••••"
-                                required={!isLogin}
-                            />
-                        </div>
-                    )}
 
                     {error && (
                         <div className={styles.error}>
@@ -181,36 +170,15 @@ export default function LoginPage() {
                     >
                         {loading ? (
                             <span className={styles.spinner}></span>
-                        ) : isLogin ? (
-                            'Entrar'
                         ) : (
-                            'Criar Conta'
+                            'Entrar'
                         )}
                     </button>
                 </form>
-
-                <div className={styles.divider}>
-                    <span>ou</span>
-                </div>
-
-                <button
-                    className={styles.switchBtn}
-                    onClick={() => {
-                        setIsLogin(!isLogin);
-                        setError('');
-                        setSuccess('');
-                    }}
-                >
-                    {isLogin ? 'Criar uma nova conta' : 'Já tenho uma conta'}
-                </button>
-
-                <a href="/" className={styles.backLink}>
-                    ← Voltar ao mapa
-                </a>
             </div>
 
             <p className={styles.footer}>
-                Sistema de Inteligência Política • Rio de Janeiro
+                Sistema de Inteligência Geográfica Política • Rio de Janeiro
             </p>
         </div>
     );
