@@ -1,231 +1,164 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo } from 'react';
 import Select from 'react-select';
-import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
 import styles from './sidebar.module.css';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const API_BASE = 'https://geral-mapadecalorapi.r954jc.easypanel.host';
 
-// Custom Styles for React Select to match the light theme
-const customStyles = {
-    control: (provided) => ({
-        ...provided,
-        borderRadius: '6px',
-        borderColor: '#dee2e6',
-        boxShadow: 'none',
-        '&:hover': {
-            borderColor: '#adb5bd'
-        }
-    }),
-    menu: (provided) => ({
-        ...provided,
-        zIndex: 9999
-    })
+// ===== SVG ICONS =====
+const Icons = {
+    vote: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 12 2 2 4-4" /><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z" /><path d="M22 19H2" /></svg>,
+    chart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>,
+    filter: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>,
+    users: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
+    building: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="16" height="20" x="4" y="2" rx="2" /><path d="M9 22v-4h6v4" /><path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M12 6h.01" /><path d="M12 10h.01" /><path d="M12 14h.01" /><path d="M16 10h.01" /><path d="M16 14h.01" /><path d="M8 10h.01" /><path d="M8 14h.01" /></svg>,
+    mapPin: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>,
+    trending: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>,
+    trendingDown: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7" /><polyline points="16 17 22 17 22 11" /></svg>,
+    trophy: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>,
+    target: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>,
+    layers: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" /><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" /><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" /></svg>,
+    download: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>,
+    share: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>,
+    search: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>,
+    chevronLeft: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>,
+    chevronRight: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>,
+    trash: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>,
+    heart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" /></svg>,
+    info: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>,
+    zap: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>,
+    percent: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" x2="5" y1="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg>,
+    // BI Intelligence Icons
+    biChart: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg>,
+    biPie: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></svg>,
+    biTable: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v18" /><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M3 9h18" /><path d="M3 15h18" /></svg>,
 };
-// Comparador Section Component - Matching HTML Reference
-// Comparador Section Component - Temporal Analysis
-function ComparadorSection({ initialAno, cargo }) {
-    const [year1, setYear1] = useState(2018);
-    const [year2, setYear2] = useState(initialAno || 2022);
-    const [options1, setOptions1] = useState([]);
-    const [options2, setOptions2] = useState([]);
-    const [cand1, setCand1] = useState('');
-    const [cand2, setCand2] = useState('');
-    const [result, setResult] = useState(null);
-    const [loading, setLoading] = useState(false);
 
-    // Load options for Year 1
-    useEffect(() => {
-        async function load1() {
-            const res = await fetch(`${API_BASE}/api/filtros?ano=${year1}`);
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setOptions1(data.map(c => ({ value: c.candidato_numero, label: `${c.candidato_nome} (${c.partido_sigla})` })));
-            }
-        }
-        load1();
-    }, [year1]);
+// ===== INFO TOOLTIP COMPONENT =====
+const InfoTooltip = ({ text, children }) => (
+    <span className={styles.tooltipWrapper}>
+        {children}
+        <span className={styles.tooltipIcon}>{Icons.info}</span>
+        <span className={styles.tooltipText}>{text}</span>
+    </span>
+);
 
-    // Load options for Year 2
-    useEffect(() => {
-        async function load2() {
-            const res = await fetch(`${API_BASE}/api/filtros?ano=${year2}`);
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setOptions2(data.map(c => ({ value: c.candidato_numero, label: `${c.candidato_nome} (${c.partido_sigla})` })));
-            }
-        }
-        load2();
-    }, [year2]);
+// ===== CUSTOM SELECT STYLES =====
+const customSelectStyles = {
+    control: (base, state) => ({
+        ...base,
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: '10px',
+        boxShadow: state.isFocused ? '0 0 0 2px rgba(255,255,255,0.2)' : 'none',
+        '&:hover': { borderColor: 'rgba(255,255,255,0.3)' },
+        minHeight: '42px'
+    }),
+    menu: (base) => ({
+        ...base,
+        background: '#1a1a1a',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '10px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+        zIndex: 100
+    }),
+    option: (base, state) => ({
+        ...base,
+        background: state.isSelected ? 'rgba(255,255,255,0.15)' : state.isFocused ? 'rgba(255,255,255,0.08)' : 'transparent',
+        color: '#fff',
+        cursor: 'pointer',
+        padding: '10px 14px',
+        fontSize: '13px'
+    }),
+    singleValue: (base) => ({ ...base, color: '#fff', fontSize: '13px' }),
+    placeholder: (base) => ({ ...base, color: 'rgba(255,255,255,0.5)', fontSize: '13px' }),
+    input: (base) => ({ ...base, color: '#fff' }),
+    indicatorSeparator: () => ({ display: 'none' }),
+    dropdownIndicator: (base) => ({ ...base, color: 'rgba(255,255,255,0.5)' })
+};
 
-    const handleCompare = async () => {
-        if (!cand1 || !cand2) return;
-        setLoading(true);
-        setResult(null);
-        try {
-            const [res1, res2] = await Promise.all([
-                fetch(`${API_BASE}/api/mapa?ano=${year1}&cargo=${cargo}&numero=${cand1}`),
-                fetch(`${API_BASE}/api/mapa?ano=${year2}&cargo=${cargo}&numero=${cand2}`)
-            ]);
-            const [d1, d2] = await Promise.all([res1.json(), res2.json()]);
-
-            const calc = (data) => {
-                const total = data.reduce((a, c) => a + c.votos, 0);
-                const base = data.reduce((a, c) => a + c.total_local, 0);
-                return { votos: total, percent: base > 0 ? ((total / base) * 100).toFixed(2) : 0 };
-            };
-
-            const r1 = calc(d1);
-            const r2 = calc(d2);
-            const c1Name = options1.find(c => String(c.value) === String(cand1))?.label || cand1;
-            const c2Name = options2.find(c => String(c.value) === String(cand2))?.label || cand2;
-
-            const diff = r2.votos - r1.votos; // Variação do 2 em relação ao 1
-            const diffPercent = r1.votos > 0 ? ((diff / r1.votos) * 100).toFixed(2) : 0;
-
-            setResult({
-                c1: { name: c1Name, votos: r1.votos, percent: r1.percent, year: year1 },
-                c2: { name: c2Name, votos: r2.votos, percent: r2.percent, year: year2 },
-                diff: diff,
-                diffPercent: diffPercent,
-                isEvolution: String(cand1) === String(cand2) && year1 !== year2
-            });
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {/* Control Row 1: Years */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <select
-                    value={year1}
-                    onChange={(e) => { setYear1(e.target.value); setCand1(''); }}
-                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontWeight: 'bold' }}
-                >
-                    <option value="2018">2018</option>
-                    <option value="2022">2022</option>
-                </select>
-                <select
-                    value={year2}
-                    onChange={(e) => { setYear2(e.target.value); setCand2(''); }}
-                    style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ccc', fontWeight: 'bold' }}
-                >
-                    <option value="2018">2018</option>
-                    <option value="2022">2022</option>
-                </select>
-            </div>
-
-            {/* Control Row 2: Candidates */}
-            <select
-                value={cand1}
-                onChange={(e) => setCand1(e.target.value)}
-                style={{ width: '100%', padding: '10px', border: '1px solid #dee2e6', borderRadius: '6px', fontSize: '13px', background: 'white', cursor: 'pointer' }}
-            >
-                <option value="">Candidato ({year1})</option>
-                {options1.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-            <select
-                value={cand2}
-                onChange={(e) => setCand2(e.target.value)}
-                style={{ width: '100%', padding: '10px', border: '1px solid #dee2e6', borderRadius: '6px', fontSize: '13px', background: 'white', cursor: 'pointer' }}
-            >
-                <option value="">Candidato ({year2})</option>
-                {options2.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-            </select>
-
-            <button
-                onClick={handleCompare}
-                disabled={!cand1 || !cand2 || loading}
-                style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: '#6366f1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    opacity: (!cand1 || !cand2 || loading) ? 0.6 : 1
-                }}
-            >
-                {loading ? 'Comparando...' : 'Analisar Variação'}
-            </button>
-            {result && (
-                <div style={{ marginTop: '12px', padding: '12px', background: '#f8f9fa', borderRadius: '6px', fontSize: '13px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <span style={{ fontSize: '10px', fontWeight: 'bold', background: '#e0e0e0', padding: '2px 6px', borderRadius: '4px' }}>{result.c1.year}</span>
-                            <p style={{ fontSize: '11px', color: '#666', margin: '4px 0' }}>{result.c1.name.split('(')[0]}</p>
-                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#6366f1', margin: 0 }}>{result.c1.votos.toLocaleString()}</p>
-                            <p style={{ fontSize: '11px', color: '#333', margin: 0 }}>{result.c1.percent}%</p>
-                        </div>
-                        <div style={{ textAlign: 'center' }}>
-                            <span style={{ fontSize: '10px', fontWeight: 'bold', background: '#e0e0e0', padding: '2px 6px', borderRadius: '4px' }}>{result.c2.year}</span>
-                            <p style={{ fontSize: '11px', color: '#666', margin: '4px 0' }}>{result.c2.name.split('(')[0]}</p>
-                            <p style={{ fontSize: '18px', fontWeight: '700', color: '#d32f2f', margin: 0 }}>{result.c2.votos.toLocaleString()}</p>
-                            <p style={{ fontSize: '11px', color: '#333', margin: 0 }}>{result.c2.percent}%</p>
-                        </div>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #ddd', paddingTop: '8px', textAlign: 'center' }}>
-                        {result.isEvolution ? (
-                            <>
-                                <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#666' }}>Variação Temporal</p>
-                                <p style={{ fontSize: '16px', fontWeight: 'bold', color: result.diff >= 0 ? '#4CAF50' : '#d32f2f', margin: 0 }}>
-                                    {result.diff >= 0 ? '▲' : '▼'} {Math.abs(result.diff).toLocaleString()} votos
-                                </p>
-                                <p style={{ fontSize: '12px', color: result.diff >= 0 ? '#4CAF50' : '#d32f2f', margin: 0 }}>
-                                    ({result.diff >= 0 ? '+' : ''}{result.diffPercent}%)
-                                </p>
-                            </>
-                        ) : (
-                            <p style={{ margin: 0, fontSize: '12px', color: '#333' }}>
-                                Diferença: <strong style={{ color: '#333' }}>{Math.abs(result.diff).toLocaleString()}</strong> votos
-                            </p>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSelect, onExportCSV, onShareURL, onOpenComparador, showComparador, onCloseComparador, mapData }) {
-    const [stats, setStats] = useState(null);
+export default function Sidebar({
+    filters,
+    setFilters,
+    stats,
+    onToggleLayer,
+    onSchoolSelect,
+    onExportCSV,
+    onShareURL,
+    mapData,
+    isCollapsed,
+    onToggleCollapse,
+    onIntelligenceClick
+}) {
+    const [activeLayer, setActiveLayer] = useState('streets');
     const [candidatosOptions, setCandidatosOptions] = useState([]);
     const [municipiosOptions, setMunicipiosOptions] = useState([]);
-    const [activeLayer, setActiveLayer] = useState('streets');
-
-    // Search State
+    const [bairrosOptions, setBairrosOptions] = useState([]);
+    const [zonasOptions, setZonasOptions] = useState([]);
+    const [partidosOptions, setPartidosOptions] = useState([]);
+    const [crescimentoData, setCrescimentoData] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
 
-    // 1. Fetch Filters Options (Reload when year changes)
+    // ===== PERFORMANCE METRICS =====
+    const performanceMetrics = useMemo(() => {
+        if (!mapData || mapData.length === 0) return null;
+
+        // Heatmap active check
+        const hasVotes = mapData.some(p => p.votos > 0);
+        const totalVotos = mapData.reduce((acc, p) => acc + (p.votos || 0), 0);
+
+        // Best school (absolute)
+        const bestSchoolAbsolute = [...mapData]
+            .filter(p => p.votos > 0)
+            .sort((a, b) => b.votos - a.votos)[0];
+
+        // Best school (relative - highest %)
+        const bestSchoolRelative = [...mapData]
+            .filter(p => p.votos > 0 && p.total_local > 0)
+            .sort((a, b) => (b.votos / b.total_local) - (a.votos / a.total_local))[0];
+
+        // Best bairro (aggregate)
+        const bairroVotes = {};
+        mapData.forEach(p => {
+            if (p.bairro && p.votos > 0) {
+                bairroVotes[p.bairro] = (bairroVotes[p.bairro] || 0) + p.votos;
+            }
+        });
+        const bestBairro = Object.entries(bairroVotes).sort((a, b) => b[1] - a[1])[0];
+
+        return {
+            hasVotes,
+            totalVotos,
+            bestSchoolAbsolute,
+            bestSchoolRelative,
+            bestBairro: bestBairro ? { nome: bestBairro[0], votos: bestBairro[1] } : null
+        };
+    }, [mapData]);
+
+    // ===== FETCH OPTIONS =====
     useEffect(() => {
         async function loadOptions() {
             try {
-                // Candidatos - filtered by year
-                const resFiltros = await fetch(`${API_BASE}/api/filtros?ano=${filters.ano}`);
+                // Candidatos by year AND cargo
+                const resFiltros = await fetch(`${API_BASE}/api/filtros?ano=${filters.ano}&cargo=${encodeURIComponent(filters.cargo)}`);
                 const dataFiltros = await resFiltros.json();
                 if (Array.isArray(dataFiltros)) {
-                    setCandidatosOptions(dataFiltros.map(c => ({
+                    // Filter to only show candidates for the selected cargo
+                    const filtered = dataFiltros.filter(c => c.cargo === filters.cargo);
+                    setCandidatosOptions(filtered.map(c => ({
                         value: c.candidato_numero,
-                        label: `${c.candidato_nome} (${c.partido_sigla})`,
-                        sq: c.sq_candidato
+                        label: `${c.candidato_nome} (${c.partido_sigla})`
                     })));
                 }
 
-                // Municipios (same for all years)
+                // Municipios
                 const resMuni = await fetch(`${API_BASE}/api/municipios`);
                 const dataMuni = await resMuni.json();
                 if (Array.isArray(dataMuni)) {
@@ -234,37 +167,73 @@ export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSe
                         ...dataMuni.map(m => ({ value: m, label: m }))
                     ]);
                 }
+
+                // Bairros
+                const resBairros = await fetch(`${API_BASE}/api/filtros/bairros`);
+                const dataBairros = await resBairros.json();
+                if (Array.isArray(dataBairros)) {
+                    setBairrosOptions([
+                        { value: '', label: 'Todos os Bairros' },
+                        ...dataBairros.map(b => ({ value: b, label: b }))
+                    ]);
+                }
+
+                // Zonas
+                const resZonas = await fetch(`${API_BASE}/api/filtros/zonas`);
+                const dataZonas = await resZonas.json();
+                if (Array.isArray(dataZonas)) {
+                    setZonasOptions([
+                        { value: '', label: 'Todas as Zonas' },
+                        ...dataZonas.map(z => ({ value: z, label: `Zona ${z}` }))
+                    ]);
+                }
+
+                // Partidos
+                const resPartidos = await fetch(`${API_BASE}/api/filtros/partidos?ano=${filters.ano}`);
+                const dataPartidos = await resPartidos.json();
+                if (Array.isArray(dataPartidos)) {
+                    setPartidosOptions([
+                        { value: '', label: 'Todos os Partidos' },
+                        ...dataPartidos.map(p => ({
+                            value: p.partido_sigla,
+                            label: `${p.partido_sigla} (${parseInt(p.total_candidatos || p.total).toLocaleString()})`
+                        }))
+                    ]);
+                }
             } catch (err) {
-                console.error(err);
+                console.error('Error loading options:', err);
             }
         }
         loadOptions();
-    }, [filters.ano]);
+    }, [filters.ano, filters.cargo]);
 
-    // 2. Fetch Stats whenever Filters Change
+    // ===== FETCH CRESCIMENTO =====
     useEffect(() => {
-        async function fetchStats() {
-            const params = new URLSearchParams();
-            if (filters.ano) params.append('ano', filters.ano);
-            if (filters.cargo) params.append('cargo', filters.cargo);
-            if (filters.municipio) params.append('municipio', filters.municipio);
-            if (filters.zona) params.append('zona', filters.zona);
-            // if (filters.candidatoNum) ... (Filtered stats by candidate? Maybe not necessary for general dashboard unless selected)
-
+        async function fetchCrescimento() {
+            if (!filters.candidatoNumero) {
+                setCrescimentoData(null);
+                return;
+            }
             try {
-                const res = await fetch(`${API_BASE}/api/stats?${params.toString()}`);
+                const res = await fetch(`${API_BASE}/api/stats/crescimento?candidato=${filters.candidatoNumero}&cargo=${encodeURIComponent(filters.cargo)}`);
                 const data = await res.json();
-                setStats(data);
+                setCrescimentoData(data);
             } catch (err) {
-                console.error("Failed to load stats", err);
+                console.error("Failed to load crescimento", err);
+                setCrescimentoData(null);
             }
         }
-        fetchStats();
-    }, [filters]);
+        fetchCrescimento();
+    }, [filters.candidatoNumero, filters.cargo]);
 
-    // Helpers
     const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+        setFilters(prev => {
+            const newFilters = { ...prev, [key]: value };
+            if (key === 'cargo' || key === 'ano') {
+                newFilters.candidatoNumero = null;
+            }
+            return newFilters;
+        });
     };
 
     const handleLayerChange = (layer) => {
@@ -272,331 +241,414 @@ export default function Sidebar({ filters, setFilters, onToggleLayer, onSchoolSe
         onToggleLayer(layer);
     };
 
-    // Search Handler with Debounce
     const handleSearch = async (term) => {
         setSearchTerm(term);
-        if (term.length < 2) {
-            setSearchResults([]);
-            return;
-        }
+        if (term.length < 2) { setSearchResults([]); return; }
         setIsSearching(true);
         try {
             const res = await fetch(`${API_BASE}/api/escolas/busca?q=${encodeURIComponent(term)}`);
             const data = await res.json();
             setSearchResults(Array.isArray(data) ? data : []);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsSearching(false);
-        }
+        } catch (err) { console.error(err); }
+        finally { setIsSearching(false); }
     };
 
-    const handleSelectSchool = (school) => {
-        if (onSchoolSelect) {
-            onSchoolSelect(school);
-        }
-        setSearchTerm('');
-        setSearchResults([]);
+    const handleClearFilters = () => {
+        setFilters(prev => ({
+            ...prev, municipio: '', bairro: '', zona: '', partido: '', candidatoNumero: null
+        }));
     };
 
-    // Chart Data
+    // ===== CHART DATA =====
     const chartData = {
         labels: stats?.partyDistribution?.slice(0, 5).map(p => p.partido_sigla) || [],
-        datasets: [
-            {
-                data: stats?.partyDistribution?.slice(0, 5).map(p => p.votos) || [],
-                backgroundColor: ['#1976D2', '#d32f2f', '#388e3c', '#fbc02d', '#7b1fa2'],
-                borderWidth: 1,
-            },
-        ],
+        datasets: [{
+            data: stats?.partyDistribution?.slice(0, 5).map(p => p.votos) || [],
+            backgroundColor: ['#ffffff', '#e5e5e5', '#cccccc', '#999999', '#666666'],
+            borderWidth: 0
+        }]
+    };
+
+    const chartOptions = {
+        plugins: { legend: { display: false } },
+        cutout: '70%'
     };
 
     return (
-        <div className={styles.sidebar}>
-            {/* HERDER PREMIUM */}
-            <div className={styles.header}>
-                <div style={{ position: 'absolute', top: '-50%', right: '-50%', width: '200%', height: '200%', background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)', animation: 'pulse 3s infinite' }}></div>
-                <h1 className={styles.headerTitle}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v0M9 12v0M9 15v0M9 18v0" />
-                    </svg>
-                    Mapa Eleitoral RJ
-                </h1>
-                <p className={styles.headerSubtitle}>
-                    {filters.ano} • {filters.cargo} • Turno 1
-                </p>
-            </div>
+        <>
+            {/* Toggle */}
+            <button
+                className={`${styles.toggleBtn} ${isCollapsed ? styles.toggleBtnCollapsed : ''}`}
+                onClick={onToggleCollapse}
+            >
+                {isCollapsed ? Icons.chevronRight : Icons.chevronLeft}
+            </button>
 
-            <div className={styles.scrollArea}>
-                {/* RESUMO EXECUTIVO (Cards) */}
-                <div className={styles.resumoGrid}>
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricIcon}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1976D2" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
+            <aside className={`${styles.sidebar} ${isCollapsed ? styles.sidebarCollapsed : ''}`}>
+                {/* Header */}
+                <header className={styles.header}>
+                    <div className={styles.headerContent}>
+                        <div className={styles.logoMark}>RJ</div>
+                        <div>
+                            <h1 className={styles.headerTitle}>Mapa Eleitoral</h1>
+                            <p className={styles.headerSubtitle}>{filters.ano} • {filters.cargo}</p>
                         </div>
-                        <h2 className={styles.metricValue}>{stats?.summary?.total_votos ? (stats.summary.total_votos / 1000).toFixed(1) + 'k' : '-'}</h2>
-                        <p className={styles.metricLabel}>Total Votos</p>
                     </div>
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricIcon}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1976D2" strokeWidth="2"><rect x="4" y="6" width="16" height="12" rx="2" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M8 12h8M8 16h4" /></svg>
-                        </div>
-                        <h2 className={styles.metricValue}>{stats?.summary?.total_locais || '-'}</h2>
-                        <p className={styles.metricLabel}>Locais Votação</p>
-                    </div>
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricIcon}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1976D2" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
-                        </div>
-                        <h2 className={styles.metricValue}>{stats?.summary?.total_candidatos || '-'}</h2>
-                        <p className={styles.metricLabel}>Candidatos</p>
-                    </div>
-                    <div className={styles.metricCard}>
-                        <div className={styles.metricIcon}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1976D2" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                        </div>
-                        <h2 className={styles.metricValue}>{stats?.summary?.total_zonas || '-'}</h2>
-                        <p className={styles.metricLabel}>Zonas</p>
-                    </div>
-                </div>
+                </header>
 
-                {/* TOP CANDIDATOS */}
-                <div className={styles.topCandidates}>
-                    <h3 className={styles.sectionTitle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>
-                        Top Candidatos
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {stats?.topCandidates?.map((cand, idx) => (
-                            <div key={idx} className={styles.candidatoItem}>
-                                <div className={styles.candidatoHeader}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {/* Image Removed */}
-                                        <div className={styles.candidatoNome} title={cand.candidato_nome}>
-                                            {cand.candidato_nome} ({(cand.partido_sigla)})
+                <div className={styles.scrollArea}>
+                    {/* Heatmap Indicator */}
+                    <div className={styles.heatmapIndicator}>
+                        <div className={`${styles.indicatorDot} ${performanceMetrics?.hasVotes ? styles.active : ''}`}></div>
+                        <span>
+                            {performanceMetrics?.hasVotes
+                                ? `Mapa ativo • ${performanceMetrics.totalVotos.toLocaleString()} votos`
+                                : 'Selecione um candidato para visualizar'
+                            }
+                        </span>
+                    </div>
+
+                    {/* ===== DASHBOARD DE PERFORMANCE ===== */}
+                    {performanceMetrics?.hasVotes && (
+                        <section className={styles.performanceSection}>
+                            <h3 className={styles.sectionTitle}>
+                                {Icons.zap}
+                                <span>Dashboard de Performance</span>
+                            </h3>
+
+                            {/* Crescimento KPI */}
+                            {crescimentoData && (
+                                <div className={styles.kpiCard}>
+                                    <div className={styles.kpiHeader}>
+                                        <InfoTooltip text="Diferença de votos entre 2022 e 2018 para o candidato selecionado">
+                                            <span>Variação Real</span>
+                                        </InfoTooltip>
+                                        {crescimentoData.variacao_nominal >= 0 ? Icons.trending : Icons.trendingDown}
+                                    </div>
+                                    <div className={`${styles.kpiValue} ${crescimentoData.variacao_nominal >= 0 ? styles.positive : styles.negative}`}>
+                                        {crescimentoData.variacao_nominal >= 0 ? '+' : ''}
+                                        {crescimentoData.variacao_nominal?.toLocaleString()} votos
+                                    </div>
+                                    <div className={styles.kpiMeta}>
+                                        <span className={crescimentoData.crescimento_percentual >= 0 ? styles.positive : styles.negative}>
+                                            ({crescimentoData.crescimento_percentual >= 0 ? '+' : ''}
+                                            {crescimentoData.crescimento_percentual?.toFixed(1)}%)
+                                        </span>
+                                        &nbsp;• 2018: {crescimentoData.votos_2018?.toLocaleString()} → 2022: {crescimentoData.votos_2022?.toLocaleString()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Troféus Grid */}
+                            <div className={styles.trophyGrid}>
+                                {/* Best School Absolute */}
+                                {performanceMetrics.bestSchoolAbsolute && (
+                                    <div className={styles.trophyCard}>
+                                        <div className={styles.trophyIcon}>{Icons.trophy}</div>
+                                        <div className={styles.trophyInfo}>
+                                            <InfoTooltip text="Escola com maior volume absoluto de votos">
+                                                <span className={styles.trophyLabel}>Melhor Escola</span>
+                                            </InfoTooltip>
+                                            <span className={styles.trophyName}>{performanceMetrics.bestSchoolAbsolute.nome}</span>
+                                            <span className={styles.trophyValue}>
+                                                {performanceMetrics.bestSchoolAbsolute.votos.toLocaleString()} votos
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className={styles.candidatoStats}>
-                                        <span className={styles.candidatoVotos}>{parseInt(cand.votos).toLocaleString()}</span>
-                                        <span className={styles.candidatoPercentual}>{cand.percent}%</span>
+                                )}
+
+                                {/* Best School Relative */}
+                                {performanceMetrics.bestSchoolRelative && (
+                                    <div className={styles.trophyCard}>
+                                        <div className={styles.trophyIcon}>{Icons.percent}</div>
+                                        <div className={styles.trophyInfo}>
+                                            <InfoTooltip text="Escola com maior percentual de votos em relação ao total">
+                                                <span className={styles.trophyLabel}>Domínio de Bairro</span>
+                                            </InfoTooltip>
+                                            <span className={styles.trophyName}>{performanceMetrics.bestSchoolRelative.nome}</span>
+                                            <span className={styles.trophyValue}>
+                                                {((performanceMetrics.bestSchoolRelative.votos / performanceMetrics.bestSchoolRelative.total_local) * 100).toFixed(1)}%
+                                                <InfoTooltip text="Market Share: percentual de votos do candidato em relação ao total de votos válidos nesta escola">
+                                                    <span> do total</span>
+                                                </InfoTooltip>
+                                            </span>
+                                        </div>
                                     </div>
+                                )}
+
+                                {/* Coração da Campanha */}
+                                {performanceMetrics.bestBairro && (
+                                    <div className={styles.trophyCard}>
+                                        <div className={styles.trophyIcon}>{Icons.heart}</div>
+                                        <div className={styles.trophyInfo}>
+                                            <InfoTooltip text="Bairro com maior densidade de votos para o candidato">
+                                                <span className={styles.trophyLabel}>Coração da Campanha</span>
+                                            </InfoTooltip>
+                                            <span className={styles.trophyName}>{performanceMetrics.bestBairro.nome}</span>
+                                            <span className={styles.trophyValue}>
+                                                {performanceMetrics.bestBairro.votos.toLocaleString()} votos
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Stats Grid */}
+                    <div className={styles.statsGrid}>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>{Icons.vote}</div>
+                            <div className={styles.statInfo}>
+                                <span className={styles.statValue}>
+                                    {stats?.totalVotos ? (stats.totalVotos / 1000000).toFixed(2) + 'M' : '—'}
+                                </span>
+                                <span className={styles.statLabel}>Total Votos</span>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>{Icons.building}</div>
+                            <div className={styles.statInfo}>
+                                <span className={styles.statValue}>{stats?.totalLocais?.toLocaleString() || '—'}</span>
+                                <span className={styles.statLabel}>Locais</span>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>{Icons.users}</div>
+                            <div className={styles.statInfo}>
+                                <span className={styles.statValue}>{stats?.totalCandidatos?.toLocaleString() || '—'}</span>
+                                <span className={styles.statLabel}>Candidatos</span>
+                            </div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.statIcon}>{Icons.mapPin}</div>
+                            <div className={styles.statInfo}>
+                                <span className={styles.statValue}>{stats?.totalZonas || '—'}</span>
+                                <span className={styles.statLabel}>Zonas</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Intelligence Reports */}
+                    {filters.candidatoNumero && (
+                        <section className={styles.section}>
+                            <h3 className={styles.sectionTitle}>{Icons.biChart}<span>Relatórios BI</span></h3>
+                            <div className={styles.intelligenceButtons}>
+                                <button
+                                    className={styles.intelligenceBtn}
+                                    onClick={() => onIntelligenceClick?.('resumo')}
+                                >
+                                    {Icons.biTable}
+                                    <span>Resumo Executivo</span>
+                                </button>
+                                <button
+                                    className={styles.intelligenceBtn}
+                                    onClick={() => onIntelligenceClick?.('distribuicao')}
+                                >
+                                    {Icons.biPie}
+                                    <span>Por Município</span>
+                                </button>
+                                <button
+                                    className={styles.intelligenceBtn}
+                                    onClick={() => onIntelligenceClick?.('top20')}
+                                >
+                                    {Icons.trophy}
+                                    <span>Top 20 Locais</span>
+                                </button>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Top Candidates */}
+                    <section className={styles.section}>
+                        <h3 className={styles.sectionTitle}>{Icons.trophy}<span>Ranking</span></h3>
+                        <div className={styles.candidateList}>
+                            {stats?.topCandidates?.slice(0, 3).map((cand, i) => (
+                                <div key={i} className={styles.candidateItem}>
+                                    <div className={styles.candidateRank}>{i + 1}</div>
+                                    <div className={styles.candidateInfo}>
+                                        <span className={styles.candidateName}>{cand.candidato_nome}</span>
+                                        <span className={styles.candidateParty}>{cand.partido_sigla}</span>
+                                    </div>
+                                    <div className={styles.candidateVotes}>{(cand.total_votos / 1000).toFixed(0)}K</div>
                                 </div>
-                                <div className={styles.progressBarContainer}>
-                                    <div
-                                        className={styles.progressBar}
-                                        style={{ width: `${cand.percent}%` }}
-                                    ></div>
+                            )) || <span className={styles.loading}>Carregando...</span>}
+                        </div>
+                    </section>
+
+                    {/* Filters */}
+                    <section className={styles.section}>
+                        <h3 className={styles.sectionTitle}>{Icons.filter}<span>Filtros</span></h3>
+
+                        {/* Ano */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Ano</label>
+                            <div className={styles.yearTabs}>
+                                <button
+                                    onClick={() => handleFilterChange('ano', 2018)}
+                                    className={`${styles.yearTab} ${filters.ano === 2018 ? styles.active : ''}`}
+                                >2018</button>
+                                <button
+                                    onClick={() => handleFilterChange('ano', 2022)}
+                                    className={`${styles.yearTab} ${filters.ano === 2022 ? styles.active : ''}`}
+                                >2022</button>
+                            </div>
+                        </div>
+
+                        {/* Cargo */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Cargo</label>
+                            <Select
+                                options={[
+                                    { value: 'PRESIDENTE', label: 'Presidente' },
+                                    { value: 'GOVERNADOR', label: 'Governador' },
+                                    { value: 'SENADOR', label: 'Senador' },
+                                    { value: 'DEPUTADO FEDERAL', label: 'Deputado Federal' },
+                                    { value: 'DEPUTADO ESTADUAL', label: 'Deputado Estadual' }
+                                ]}
+                                value={{ value: filters.cargo, label: filters.cargo.split(' ').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') }}
+                                onChange={(opt) => handleFilterChange('cargo', opt.value)}
+                                styles={customSelectStyles}
+                            />
+                        </div>
+
+                        {/* Município */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Município</label>
+                            <Select
+                                options={municipiosOptions}
+                                placeholder="Todo o Estado"
+                                value={municipiosOptions.find(m => m.value === filters.municipio) || null}
+                                onChange={(opt) => handleFilterChange('municipio', opt?.value || '')}
+                                styles={customSelectStyles}
+                                isClearable
+                            />
+                        </div>
+
+                        {/* Bairro */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Bairro</label>
+                            <Select
+                                options={bairrosOptions}
+                                placeholder="Todos os Bairros"
+                                value={bairrosOptions.find(b => b.value === filters.bairro) || null}
+                                onChange={(opt) => handleFilterChange('bairro', opt?.value || '')}
+                                styles={customSelectStyles}
+                                isClearable
+                            />
+                        </div>
+
+                        {/* Zona */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Zona Eleitoral</label>
+                            <Select
+                                options={zonasOptions}
+                                placeholder="Todas as Zonas"
+                                value={zonasOptions.find(z => z.value === filters.zona) || null}
+                                onChange={(opt) => handleFilterChange('zona', opt?.value || '')}
+                                styles={customSelectStyles}
+                                isClearable
+                            />
+                        </div>
+
+                        {/* Partido */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Partido</label>
+                            <Select
+                                options={partidosOptions}
+                                placeholder="Todos os Partidos"
+                                value={partidosOptions.find(p => p.value === filters.partido) || null}
+                                onChange={(opt) => handleFilterChange('partido', opt?.value || '')}
+                                styles={customSelectStyles}
+                                isClearable
+                            />
+                        </div>
+
+                        {/* Candidato */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.filterLabel}>Candidato</label>
+                            <Select
+                                options={candidatosOptions}
+                                placeholder="Buscar candidato..."
+                                value={candidatosOptions.find(c => String(c.value) === String(filters.candidatoNumero)) || null}
+                                onChange={(opt) => handleFilterChange('candidatoNumero', opt?.value || null)}
+                                styles={customSelectStyles}
+                                isClearable
+                            />
+                        </div>
+
+                        <button className={styles.clearBtn} onClick={handleClearFilters}>
+                            {Icons.trash} Limpar Filtros
+                        </button>
+                    </section>
+
+                    {/* Party Chart */}
+                    {stats?.partyDistribution && stats.partyDistribution.length > 0 && (
+                        <section className={styles.section}>
+                            <h3 className={styles.sectionTitle}>{Icons.chart}<span>Distribuição</span></h3>
+                            <div className={styles.chartContainer}>
+                                <Doughnut data={chartData} options={chartOptions} />
+                                <div className={styles.chartLegend}>
+                                    {stats.partyDistribution.slice(0, 5).map((p, i) => (
+                                        <div key={i} className={styles.legendItem}>
+                                            <div className={styles.legendDot} style={{
+                                                background: ['#ffffff', '#e5e5e5', '#cccccc', '#999999', '#666666'][i]
+                                            }}></div>
+                                            <span>{p.partido_sigla}</span>
+                                            <span className={styles.legendValue}>{((p.votos / stats.totalVotos) * 100).toFixed(1)}%</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        )) || <p style={{ fontSize: '12px', color: '#999' }}>Carregando...</p>}
-                    </div>
-                </div>
-
-                {/* FILTROS AVANÇADOS */}
-                <div className={styles.sidebarSection} style={{ borderLeft: '4px solid #1976D2' }}>
-                    <h3 className={styles.sectionTitle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-                        Filtros
-                    </h3>
-
-                    {/* Ano (Year Selector) */}
-                    <div className={styles.filterGroup}>
-                        <label className={styles.filterLabel}>Ano da Eleição</label>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                                onClick={() => handleFilterChange('ano', 2018)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 16px',
-                                    border: filters.ano === 2018 ? '2px solid #1976D2' : '1px solid #dee2e6',
-                                    borderRadius: '6px',
-                                    background: filters.ano === 2018 ? '#e3f2fd' : 'white',
-                                    color: filters.ano === 2018 ? '#1976D2' : '#333',
-                                    fontWeight: filters.ano === 2018 ? '600' : '400',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    fontSize: '14px'
-                                }}
-                            >
-                                2018
-                            </button>
-                            <button
-                                onClick={() => handleFilterChange('ano', 2022)}
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 16px',
-                                    border: filters.ano === 2022 ? '2px solid #1976D2' : '1px solid #dee2e6',
-                                    borderRadius: '6px',
-                                    background: filters.ano === 2022 ? '#e3f2fd' : 'white',
-                                    color: filters.ano === 2022 ? '#1976D2' : '#333',
-                                    fontWeight: filters.ano === 2022 ? '600' : '400',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    fontSize: '14px'
-                                }}
-                            >
-                                2022
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Cargo */}
-                    <div className={styles.filterGroup}>
-                        <label className={styles.filterLabel}>Cargo</label>
-                        <Select
-                            options={[
-                                { value: 'PRESIDENTE', label: 'Presidente' },
-                                { value: 'GOVERNADOR', label: 'Governador' },
-                                { value: 'SENADOR', label: 'Senador' },
-                                { value: 'DEPUTADO FEDERAL', label: 'Deputado Federal' },
-                                { value: 'DEPUTADO ESTADUAL', label: 'Deputado Estadual' }
-                            ]}
-                            value={{ value: filters.cargo, label: filters.cargo }}
-                            onChange={(opt) => handleFilterChange('cargo', opt.value)}
-                            styles={customStyles}
-                        />
-                    </div>
-
-                    <div className={styles.filterGroup}>
-                        <label className={styles.filterLabel}>Município</label>
-                        <Select
-                            options={municipiosOptions}
-                            placeholder="Selecione..."
-                            onChange={(opt) => handleFilterChange('municipio', opt?.value)}
-                            styles={customStyles}
-                            isClearable
-                        />
-                    </div>
-
-                    <div className={styles.filterGroup}>
-                        <label className={styles.filterLabel}>Candidato</label>
-                        <Select
-                            options={candidatosOptions}
-                            placeholder="Buscar candidato..."
-                            onChange={(opt) => {
-                                handleFilterChange('candidatoNum', opt?.value);
-                            }}
-                            styles={customStyles}
-                            isClearable
-                        />
-                    </div>
-
-                    <button className={styles.resetBtn} onClick={() => setFilters(prev => ({ ...prev, municipio: '', candidatoNum: '' }))}>
-                        Limpar Filtros
-                    </button>
-                </div>
-
-                {/* INSIGHTS */}
-                {stats?.topCandidates?.[0] && (
-                    <div className={styles.insights}>
-                        <h3 className={styles.sectionTitle}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>
-                            Insights
-                        </h3>
-                        <div className={styles.insightItem}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>
-                            <span>
-                                <span style={{ fontWeight: 600 }}>{stats.topCandidates[0].candidato_nome}</span> liderou com <span style={{ fontWeight: 600 }}>{parseInt(stats.topCandidates[0].votos).toLocaleString()} votos ({stats.topCandidates[0].percent}%)</span>
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                {/* CHART */}
-                <div className={styles.sidebarSection}>
-                    <h3 className={styles.sectionTitle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 2a10 10 0 0 1 10 10h-10V2z" /></svg>
-                        Distribuição por Partido
-                    </h3>
-                    <div style={{ position: 'relative', height: '200px', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                        {stats ? <Pie data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} /> : 'Carregando...'}
-                    </div>
-                </div>
-
-                {/* COMPARADOR DE CANDIDATOS - Matching HTML */}
-                <div className={styles.sidebarSection}>
-                    <h3 className={styles.sectionTitle} onClick={onOpenComparador} style={{ cursor: 'pointer' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5" /><circle cx="12" cy="12" r="3" /></svg>
-                        Comparar Candidatos {showComparador ? '▲' : '▼'}
-                    </h3>
-                    {showComparador && (
-                        <ComparadorSection
-                            initialAno={filters.ano}
-                            cargo={filters.cargo}
-                        />
+                        </section>
                     )}
-                </div>
 
-                {/* ACTIONS */}
-                <div className={styles.acoesGrid}>
-                    <button className={`${styles.btnAcao} ${styles.btnPrimary}`} onClick={onExportCSV}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
-                        Exportar CSV
-                    </button>
-                    <button className={`${styles.btnAcao} ${styles.btnSecondary}`} onClick={onShareURL}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" /></svg>
-                        Compartilhar
-                    </button>
-                </div>
+                    {/* Layers */}
+                    <section className={styles.section}>
+                        <h3 className={styles.sectionTitle}>{Icons.layers}<span>Camadas</span></h3>
+                        <div className={styles.layerButtons}>
+                            <button className={`${styles.layerBtn} ${activeLayer === 'streets' ? styles.active : ''}`} onClick={() => handleLayerChange('streets')}>Claro</button>
+                            <button className={`${styles.layerBtn} ${activeLayer === 'dark' ? styles.active : ''}`} onClick={() => handleLayerChange('dark')}>Escuro</button>
+                            <button className={`${styles.layerBtn} ${activeLayer === 'satellite' ? styles.active : ''}`} onClick={() => handleLayerChange('satellite')}>Satélite</button>
+                        </div>
+                    </section>
 
-                {/* CAMADAS (Mocked functionality for now) */}
-                <div className={styles.sidebarSection}>
-                    <h3 className={styles.sectionTitle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
-                        Camadas do Mapa
-                    </h3>
-                    <div className={styles.layerControl}>
-                        {['streets', 'satellite', 'dark'].map(layer => (
-                            <button
-                                key={layer}
-                                className={`${styles.layerBtn} ${activeLayer === layer ? styles.layerBtnActive : ''}`}
-                                onClick={() => handleLayerChange(layer)}
-                            >
-                                {layer.charAt(0).toUpperCase() + layer.slice(1)}
-                            </button>
-                        ))}
+                    {/* Actions */}
+                    <div className={styles.actions}>
+                        <button className={styles.actionBtn} onClick={onExportCSV}>{Icons.download} Exportar</button>
+                        <button className={styles.actionBtn} onClick={onShareURL}>{Icons.share} Compartilhar</button>
                     </div>
+
+                    {/* Search */}
+                    <section className={styles.section}>
+                        <h3 className={styles.sectionTitle}>{Icons.search}<span>Buscar Local</span></h3>
+                        <input
+                            type="text"
+                            className={styles.searchInput}
+                            placeholder="Digite o nome da escola..."
+                            value={searchTerm}
+                            onChange={(e) => handleSearch(e.target.value)}
+                        />
+                        {searchResults.length > 0 && (
+                            <div className={styles.searchResults}>
+                                {searchResults.slice(0, 5).map((school, i) => (
+                                    <div key={i} className={styles.searchItem} onClick={() => {
+                                        onSchoolSelect(school);
+                                        setSearchTerm('');
+                                        setSearchResults([]);
+                                    }}>
+                                        {school.nome_local}
+                                        <span className={styles.searchBairro}>{school.bairro}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </div>
 
-                {/* BUSCA DE ESCOLA */}
-                <div className={styles.sidebarSection}>
-                    <h3 className={styles.sectionTitle}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-                        Buscar Local de Votação
-                    </h3>
-                    <input
-                        type="text"
-                        className={styles.inputField}
-                        placeholder="Digite o nome da escola..."
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                    />
-                    <p style={{ fontSize: '11px', color: '#888', margin: '4px 0 8px 0' }}>Apenas locais do Estado do Rio de Janeiro</p>
-                    {isSearching && <p style={{ fontSize: '12px', color: '#999' }}>Buscando...</p>}
-                    {searchResults.length > 0 && (
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '200px', overflowY: 'auto' }}>
-                            {searchResults.map(school => (
-                                <li
-                                    key={school.id}
-                                    onClick={() => handleSelectSchool(school)}
-                                    style={{ padding: '10px', borderBottom: '1px solid #eee', cursor: 'pointer', fontSize: '13px' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = '#f0f0f0'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                >
-                                    <strong>{school.nome_local}</strong><br />
-                                    <span style={{ color: '#666', fontSize: '11px' }}>{school.bairro || school.cidade}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-
-                {/* FOOTER */}
-                <div className={styles.footer}>
-                    <p style={{ margin: '0 0 4px 0' }}>Fonte: TSE - Base dos Dados</p>
-                    <p style={{ margin: 0 }}>Última atualização: 2022</p>
-                </div>
-            </div>
-        </div>
+                {/* Footer */}
+                <footer className={styles.footer}>Sistema de Inteligência Política • RJ</footer>
+            </aside>
+        </>
     );
 }

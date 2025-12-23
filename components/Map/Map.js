@@ -27,6 +27,41 @@ const createClusterCustomIcon = function (cluster) {
     });
 };
 
+// Strategic Point Icon Creator
+const createStrategicIcon = (tipo, cor) => {
+    const icons = {
+        star: '⭐',
+        flag: '🚩',
+        pin: '📍',
+        alert: '⚠️',
+        target: '🎯'
+    };
+
+    const icon = icons[tipo] || icons.star;
+
+    return L.divIcon({
+        html: `
+            <div style="
+                background: ${cor || '#FF5722'};
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                border: 3px solid white;
+            ">
+                ${icon}
+            </div>
+        `,
+        className: 'strategic-marker',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+    });
+};
+
 // Componente Interno para Heatmap
 function HeatmapLayer({ points }) {
     const map = useMap();
@@ -34,32 +69,28 @@ function HeatmapLayer({ points }) {
     useEffect(() => {
         if (!points || points.length === 0) return;
 
-        // Check if we have minimal data (no votes)
-        const hasVoteData = points.some(p => p.votos !== undefined);
-        if (!hasVoteData) return; // Skip Heatmap if no votes
+        const hasVoteData = points.some(p => p.votos !== undefined && p.votos > 0);
+        if (!hasVoteData) return;
 
-        // Auto-Scale Max Intensity based on highest vote count in dataset
         const highestVote = Math.max(...points.map(p => p.votos || 0), 1);
 
-        // Data format: [lat, lng, intensity]
-        // API returns keys: lat, lng, votos (already parsed as numbers by backend service)
         const heatPoints = points
-            .filter(p => p.lat != null && p.lng != null)
+            .filter(p => p.lat != null && p.lng != null && p.votos > 0)
             .map(p => [p.lat, p.lng, p.votos]);
 
         const heat = L.heatLayer(heatPoints, {
             radius: 25,
             blur: 20,
             maxZoom: 12,
-            max: highestVote * 0.4, // Lower intensity to avoid opaque blobs
+            max: highestVote * 0.4,
             gradient: {
-                0.2: 'blue',
-                0.4: 'cyan',
-                0.6: 'lime',
-                0.8: 'yellow',
-                1.0: 'red'
+                0.2: '#333333',
+                0.4: '#555555',
+                0.6: '#888888',
+                0.8: '#bbbbbb',
+                1.0: '#ffffff'
             },
-            minOpacity: 0.2 // More transparent
+            minOpacity: 0.25
         }).addTo(map);
 
         return () => {
@@ -71,50 +102,56 @@ function HeatmapLayer({ points }) {
 }
 
 // Markers Controller - Native Leaflet Implementation via useMap
-// OPTIMIZATION: Bypasses React VDOM for 5k+ markers to prevent freezing
 function MarkersController({ points, onSchoolClick }) {
     const map = useMap();
 
     useEffect(() => {
         if (!points || points.length === 0) return;
 
-        // 1. Initialize Cluster Group with chunked loading
         const markers = L.markerClusterGroup({
-            chunkedLoading: true, // CRITICAL: Splits processing to avoid UI freeze
-            chunkInterval: 200,   // Process for 200ms
-            chunkDelay: 50,       // Wait 50ms between chunks
+            chunkedLoading: true,
+            chunkInterval: 200,
+            chunkDelay: 50,
             iconCreateFunction: createClusterCustomIcon,
             spiderfyOnMaxZoom: true,
             showCoverageOnHover: false,
-            zoomToBoundsOnClick: true
+            zoomToBoundsOnClick: true,
+            maxClusterRadius: 60
         });
 
-        // 2. Create Markers (Native Leaflet)
         const markerList = points
             .filter(p => p.lat != null && p.lng != null)
             .map(p => {
                 const marker = L.marker([p.lat, p.lng]);
 
-                // Bind Popup with HTML string (React components won't work inside native bindPopup easily without portal)
-                // Using simple HTML string for performance
                 const hasVotes = p.votos > 0;
                 const popupContent = `
-                    <div style="font-family: sans-serif; font-size: 13px;">
-                        <strong style="font-size: 14px;">${p.nome}</strong><br/>
+                    <div style="font-family: 'Inter', sans-serif; font-size: 13px; min-width: 220px;">
+                        <strong style="font-size: 13px; color: #fff;">${p.nome}</strong>
+                        ${p.bairro ? `<br/><span style="color: rgba(255,255,255,0.5); font-size: 11px;">📍 ${p.bairro}${p.cidade ? `, ${p.cidade}` : ''}</span>` : ''}
                         ${hasVotes ? `
-                            <div style="margin-top: 4px;">
-                                Votos: <strong>${p.votos}</strong> (${p.percent}%)
+                            <div style="margin-top: 10px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="color: rgba(255,255,255,0.5); font-size: 10px; text-transform: uppercase;">Votos</span>
+                                    <strong style="color: #fff; font-size: 16px; font-family: monospace;">${p.votos.toLocaleString()}</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="color: rgba(255,255,255,0.5); font-size: 10px; text-transform: uppercase;">% Local</span>
+                                    <strong style="color: #4ade80; font-size: 14px; font-family: monospace;">${p.percent}%</strong>
+                                </div>
                             </div>
-                        ` : ''}
-                        <div style="margin-top: 8px; font-size: 11px; color: #666; font-style: italic; cursor: pointer;">
-                            Clique no marcador para ver detalhes
+                        ` : '<div style="margin-top: 8px; color: rgba(255,255,255,0.4); font-size: 11px; text-align: center;">Selecione um candidato</div>'}
+                        <div style="margin-top: 10px; font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; text-align: center; padding: 8px; background: rgba(255,255,255,0.08); border-radius: 8px; text-transform: uppercase;">
+                            Ver ranking →
                         </div>
                     </div>
                 `;
 
-                marker.bindPopup(popupContent);
+                marker.bindPopup(popupContent, {
+                    maxWidth: 300,
+                    className: 'custom-popup'
+                });
 
-                // Add Click Event to trigger React State
                 marker.on('click', () => {
                     if (onSchoolClick) onSchoolClick(p.id);
                 });
@@ -122,17 +159,58 @@ function MarkersController({ points, onSchoolClick }) {
                 return marker;
             });
 
-        // 3. Add to Cluster Group
         markers.addLayers(markerList);
-
-        // 4. Add to Map
         map.addLayer(markers);
 
-        // Cleanup
         return () => {
             map.removeLayer(markers);
         };
     }, [points, map, onSchoolClick]);
+
+    return null;
+}
+
+// Strategic Points Layer
+function StrategicPointsLayer({ pontos }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!pontos || pontos.length === 0) return;
+
+        const layerGroup = L.layerGroup();
+
+        pontos.forEach(ponto => {
+            const marker = L.marker([ponto.lat, ponto.lng], {
+                icon: createStrategicIcon(ponto.tipo_icone, ponto.cor)
+            });
+
+            const popupContent = `
+                <div style="font-family: 'Inter', sans-serif; font-size: 13px; min-width: 180px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 20px;">${ponto.tipo_icone === 'star' ? '⭐' : ponto.tipo_icone === 'flag' ? '🚩' : ponto.tipo_icone === 'alert' ? '⚠️' : '📍'}</span>
+                        <strong style="font-size: 14px; color: #212529;">${ponto.titulo}</strong>
+                    </div>
+                    ${ponto.descricao ? `<p style="margin: 0; color: #6c757d; font-size: 12px; line-height: 1.4;">${ponto.descricao}</p>` : ''}
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e9ecef; font-size: 10px; color: #adb5bd;">
+                        Ponto Estratégico
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent, {
+                maxWidth: 250,
+                className: 'strategic-popup'
+            });
+
+            layerGroup.addLayer(marker);
+        });
+
+        layerGroup.addTo(map);
+
+        return () => {
+            map.removeLayer(layerGroup);
+        };
+    }, [pontos, map]);
 
     return null;
 }
@@ -142,7 +220,9 @@ function FlyToController({ coords }) {
     const map = useMap();
     useEffect(() => {
         if (coords && coords.lat && coords.lng) {
-            map.flyTo([coords.lat, coords.lng], coords.zoom || 15);
+            map.flyTo([coords.lat, coords.lng], coords.zoom || 15, {
+                duration: 1.5
+            });
         }
     }, [coords, map]);
     return null;
@@ -165,7 +245,15 @@ function FitBoundsController({ points }) {
     return null;
 }
 
-export default function MapComponent({ points, showHeatmap, showMarkers, onSchoolClick, activeLayer, flyToCoords }) {
+export default function MapComponent({
+    points,
+    pontosEstrategicos,
+    showHeatmap,
+    showMarkers,
+    onSchoolClick,
+    activeLayer,
+    flyToCoords
+}) {
     const center = [-22.5, -43.2];
 
     const layers = {
@@ -206,6 +294,7 @@ export default function MapComponent({ points, showHeatmap, showMarkers, onSchoo
                 {/* FitBounds Controller - Auto-center on data */}
                 <FitBoundsController points={points} />
 
+                {/* Heatmap Layer */}
                 {showHeatmap && <HeatmapLayer points={points} />}
 
                 {/* Optimized Markers using Native Leaflet Cluster */}
@@ -213,31 +302,37 @@ export default function MapComponent({ points, showHeatmap, showMarkers, onSchoo
                     <MarkersController points={points} onSchoolClick={onSchoolClick} />
                 )}
 
+                {/* Strategic Points Layer */}
+                {pontosEstrategicos && pontosEstrategicos.length > 0 && (
+                    <StrategicPointsLayer pontos={pontosEstrategicos} />
+                )}
+
                 {/* Custom Legend Control */}
-                {showHeatmap && points && points.length > 0 && (
+                {showHeatmap && points && points.length > 0 && points.some(p => p.votos > 0) && (
                     <div className="leaflet-bottom leaflet-right" style={{ pointerEvents: 'auto', margin: '20px' }}>
                         <div className="leaflet-control" style={{
-                            background: 'white',
-                            padding: '10px',
-                            borderRadius: '8px',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                            fontFamily: 'sans-serif',
-                            minWidth: '150px'
+                            background: '#0a0a0a',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                            fontFamily: "'Inter', sans-serif",
+                            minWidth: '160px'
                         }}>
-                            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Intensidade de Votos</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {/* Gradient Bar */}
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '10px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>
+                                Intensidade
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                 <div style={{
-                                    height: '10px',
+                                    height: '6px',
                                     width: '100%',
-                                    background: 'linear-gradient(to right, blue, cyan, lime, yellow, red)',
-                                    borderRadius: '5px'
+                                    background: 'linear-gradient(to right, #333333, #555555, #888888, #bbbbbb, #ffffff)',
+                                    borderRadius: '3px'
                                 }}></div>
-                                {/* Labels */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>
                                     <span>0</span>
                                     <span>{Math.round(Math.max(...points.map(p => p.votos), 1) / 2).toLocaleString()}</span>
-                                    <span>{Math.max(...points.map(p => p.votos), 1).toLocaleString()}+</span>
+                                    <span>{Math.max(...points.map(p => p.votos), 1).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>

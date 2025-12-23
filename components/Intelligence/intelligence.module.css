@@ -1,0 +1,373 @@
+/* Intelligence Panels - BI Analytics Suite */
+
+/* ===== OVERLAY ===== */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* ===== PANEL BASE ===== */
+.panel {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    max-width: 1200px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ===== HEADER ===== */
+.panelHeader {
+    background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 4px solid #d69e2e;
+}
+
+.panelTitle h2 {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.panelSubtitle {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    margin-top: 4px;
+    display: block;
+}
+
+.closeBtn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.closeBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+/* ===== CONTENT ===== */
+.panelContent {
+    padding: 30px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ===== EXECUTIVE TABLE ===== */
+.executiveTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Inter', sans-serif;
+}
+
+.executiveTable thead tr {
+    background: #1a365d;
+}
+
+.executiveTable th {
+    color: #fff;
+    padding: 16px 20px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.executiveTable th:nth-child(2),
+.executiveTable th:nth-child(3) {
+    text-align: center;
+}
+
+.executiveTable td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 15px;
+}
+
+.rowEven {
+    background: #f7fafc;
+}
+
+.rowOdd {
+    background: #fff;
+}
+
+.metricName {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.metricValue {
+    text-align: center;
+    font-weight: 700;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 16px;
+    color: #1a365d;
+}
+
+/* ===== STATUS BADGES ===== */
+.statusBadge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.statusBadge.green {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.statusBadge.yellow {
+    background: #fefcbf;
+    color: #744210;
+}
+
+.statusBadge.orange {
+    background: #feebc8;
+    color: #7b341e;
+}
+
+.statusBadge.blue {
+    background: #bee3f8;
+    color: #2a4365;
+}
+
+.statusBadge.red {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.statusBadge.gray {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+/* ===== CHARTS GRID ===== */
+.chartsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.chartContainer {
+    background: #f7fafc;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.chartTitle {
+    color: #1a365d;
+    font-size: 14px;
+    font-weight: 700;
+    margin: 0 0 20px 0;
+    text-align: center;
+    letter-spacing: 0.5px;
+}
+
+.barChartWrapper {
+    height: 450px;
+}
+
+.pieChartWrapper {
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===== RANKING TABLE ===== */
+.rankingTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Inter', sans-serif;
+}
+
+.rankingTable thead tr {
+    background: #1a365d;
+}
+
+.rankingTable th {
+    color: #fff;
+    padding: 14px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.rankingTable th:first-child {
+    text-align: center;
+    width: 80px;
+}
+
+.rankingTable th:last-child {
+    text-align: right;
+    width: 120px;
+}
+
+.rankingTable td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 14px;
+}
+
+.rankCell {
+    text-align: center;
+    font-weight: 700;
+    font-family: 'Roboto Mono', monospace;
+}
+
+.localName {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.municipioZona {
+    color: #718096;
+    font-size: 13px;
+}
+
+.votosCell {
+    text-align: right;
+    font-weight: 700;
+    font-family: 'Roboto Mono', monospace;
+    color: #1a365d;
+}
+
+/* ===== MEDALS ===== */
+.medal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.medal1 {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    color: #5a4a00;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.5);
+}
+
+.medal2 {
+    background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+    color: #4a4a4a;
+    box-shadow: 0 2px 8px rgba(192, 192, 192, 0.5);
+}
+
+.medal3 {
+    background: linear-gradient(135deg, #cd7f32, #e6a15c);
+    color: #4a3000;
+    box-shadow: 0 2px 8px rgba(205, 127, 50, 0.5);
+}
+
+.topThree {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.08), transparent) !important;
+}
+
+/* ===== LOADING & ERROR ===== */
+.loadingPanel,
+.errorPanel {
+    background: #fff;
+    padding: 40px 60px;
+    border-radius: 16px;
+    text-align: center;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #1a365d;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.errorPanel button {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #1a365d;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+    .chartsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .panel {
+        margin: 10px;
+        max-height: 95vh;
+    }
+
+    .panelHeader {
+        padding: 16px 20px;
+    }
+
+    .panelTitle h2 {
+        font-size: 18px;
+    }
+
+    .panelContent {
+        padding: 20px;
+    }
+}

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Sidebar from '../components/Sidebar/Sidebar';
 import SchoolDetails from '../components/SchoolDetails/SchoolDetails';
+import IntelligencePanels from '../components/Intelligence/IntelligencePanels';
 import styles from './page.module.css';
 
 const Map = dynamic(() => import('../components/Map/Map'), {
@@ -24,13 +25,16 @@ function HomeContent() {
     ano: searchParams.get('ano') ? parseInt(searchParams.get('ano')) : 2022,
     cargo: searchParams.get('cargo') || 'PRESIDENTE',
     municipio: searchParams.get('municipio') || '',
-    partido: null,
+    bairro: searchParams.get('bairro') || '',
+    zona: searchParams.get('zona') || '',
+    partido: searchParams.get('partido') || '',
     candidatoNumero: searchParams.get('candidato') ? parseInt(searchParams.get('candidato')) : null,
     showHeatmap: true,
     showMarkers: true
   });
 
   const [mapData, setMapData] = useState([]);
+  const [pontosEstrategicos, setPontosEstrategicos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ totalVotos: 0, percentualGeral: 0, nome: '' });
   const [activeLayer, setActiveLayer] = useState('streets');
@@ -38,27 +42,50 @@ function HomeContent() {
   const [selectedSchoolId, setSelectedSchoolId] = useState(null);
   const [flyToCoords, setFlyToCoords] = useState(null);
 
+  // Sidebar collapsed state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   // Comparador State
   const [showComparador, setShowComparador] = useState(false);
 
-  // REDIRECT TO DEFAULT VIEW IF EMPTY
+  // Intelligence Panel State
+  const [activeIntelligencePanel, setActiveIntelligencePanel] = useState(null);
+
+  // Selected candidate name (for intelligence panels)
+  const [selectedCandidateName, setSelectedCandidateName] = useState('');
+
+  // Intelligence from school details state
+  const [intelligenceFromSchool, setIntelligenceFromSchool] = useState(null);
+
+  // Listen for intelligence panel requests from SchoolDetails
   useEffect(() => {
-    if (!filters.candidatoNumero) {
-      // If no candidate selected, redirect to default (Bolsonaro 2022) to show populated map
-      const defaultParams = new URLSearchParams();
-      defaultParams.set('ano', '2022');
-      defaultParams.set('cargo', 'PRESIDENTE');
-      defaultParams.set('candidato', '22'); // Bolsonaro
-      // Preserve other filters if any
-      if (filters.municipio) defaultParams.set('municipio', filters.municipio);
+    const handleOpenIntelligence = (event) => {
+      const { panel, candidato, cargo, ano } = event.detail;
+      // Update filters to match the selected candidate
+      setFilters(prev => ({
+        ...prev,
+        candidatoNumero: candidato,
+        cargo: cargo,
+        ano: ano
+      }));
+      // Open the intelligence panel
+      setActiveIntelligencePanel(panel);
+    };
 
-      const newUrl = `${window.location.pathname}?${defaultParams.toString()}`;
-      router.replace(newUrl);
+    window.addEventListener('openIntelligence', handleOpenIntelligence);
+    return () => window.removeEventListener('openIntelligence', handleOpenIntelligence);
+  }, []);
 
-      // Update local state to reflect redirect immediately
+  // SET DEFAULT VIEW ONLY ON INITIAL LOAD (when no URL params)
+  useEffect(() => {
+    // Only set defaults if no candidato AND no cargo was specified
+    const hasUrlParams = searchParams.get('cargo') || searchParams.get('candidato');
+
+    if (!hasUrlParams && !filters.candidatoNumero) {
+      // First visit without params - set default view
       setFilters(prev => ({ ...prev, ano: 2022, cargo: 'PRESIDENTE', candidatoNumero: 22 }));
     }
-  }, []); // Run once on mount
+  }, []); // Only run once on mount
 
   // Update URL when filters change (Deep Linking)
   useEffect(() => {
@@ -66,11 +93,14 @@ function HomeContent() {
     if (filters.ano) params.set('ano', filters.ano.toString());
     if (filters.cargo) params.set('cargo', filters.cargo);
     if (filters.municipio) params.set('municipio', filters.municipio);
+    if (filters.bairro) params.set('bairro', filters.bairro);
+    if (filters.zona) params.set('zona', filters.zona);
+    if (filters.partido) params.set('partido', filters.partido);
     if (filters.candidatoNumero) params.set('candidato', filters.candidatoNumero.toString());
 
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, '', newUrl);
-  }, [filters.ano, filters.cargo, filters.municipio, filters.candidatoNumero]);
+  }, [filters]);
 
   const handleSchoolSelectFromSearch = (school) => {
     if (school.latitude && school.longitude) {
@@ -116,44 +146,31 @@ function HomeContent() {
     });
   }, []);
 
+  // Fetch Map Data
   useEffect(() => {
     async function fetchData() {
-      // Allow fetching map without candidate to show base layer (schools)
-      // if (!filters.candidatoNumero) return;
-
       setLoading(true);
       try {
         const params = new URLSearchParams({
           ano: filters.ano,
           cargo: filters.cargo,
-          // numero: filters.candidatoNumero // Now optional
         });
 
         if (filters.candidatoNumero) {
           params.append('numero', filters.candidatoNumero);
-          // If candidate selected, we likely WANT votes for heatmap? 
-          // But user said "just pull the point first".
-          // Let's force minimal for now to solve performance, as SchoolDetails fetches specific data.
-          // Or maybe only minimal if NO candidate? 
-          // If I have a candidate, I probably want to see where they won.
-          // Let's assume minimal=true ONLY if payload is huge or by default?
-          // User requested "pull school point first". 
-          // Let's try passing minimal=true ALWAYS for the map pins to be light.
-          // But then Heatmap renders nothing.
-          // The user's main complaint is "opening 5000 points".
-          // I will set minimal=true.
-          params.append('minimal', 'true');
-        } else {
-          params.append('minimal', 'true');
         }
-
-        // Add municipio filter if selected
         if (filters.municipio) {
           params.append('municipio', filters.municipio);
         }
-
-        // CACHE BUSTER: Force new request
-        params.append('_t', Date.now());
+        if (filters.bairro) {
+          params.append('bairro', filters.bairro);
+        }
+        if (filters.zona) {
+          params.append('zona', filters.zona);
+        }
+        if (filters.partido) {
+          params.append('partido', filters.partido);
+        }
 
         const res = await fetch(`${API_BASE}/api/mapa?${params.toString()}`);
         const data = await res.json();
@@ -168,7 +185,6 @@ function HomeContent() {
           nome: filters.candidatoNumero ? `Candidato ${filters.candidatoNumero}` : 'Todos os Locais'
         });
 
-        // Console log for debugging
         console.log(`🗳️ [${filters.ano}] Exibindo ${data.length} locais com ${total.toLocaleString()} votos do candidato ${filters.candidatoNumero} no mapa`);
 
         setMapData(data);
@@ -180,7 +196,22 @@ function HomeContent() {
     }
 
     fetchData();
-  }, [filters.ano, filters.candidatoNumero, filters.cargo, filters.municipio]);
+  }, [filters.ano, filters.candidatoNumero, filters.cargo, filters.municipio, filters.bairro, filters.zona, filters.partido]);
+
+  // Fetch Pontos Estratégicos
+  useEffect(() => {
+    async function fetchPontos() {
+      try {
+        const res = await fetch(`${API_BASE}/api/mapa/pontos-estrategicos`);
+        const data = await res.json();
+        setPontosEstrategicos(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Erro ao buscar pontos estratégicos:', err);
+        setPontosEstrategicos([]);
+      }
+    }
+    fetchPontos();
+  }, []);
 
   return (
     <main className={styles.main}>
@@ -196,13 +227,27 @@ function HomeContent() {
         showComparador={showComparador}
         onCloseComparador={() => setShowComparador(false)}
         mapData={mapData}
+        isCollapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onIntelligenceClick={(panel) => setActiveIntelligencePanel(panel)}
       />
 
-      <div className={styles.mapWrapper}>
+      {/* Intelligence Panels */}
+      <IntelligencePanels
+        activePanel={activeIntelligencePanel}
+        onClose={() => setActiveIntelligencePanel(null)}
+        candidatoNumero={filters.candidatoNumero}
+        candidatoNome={stats?.nome || `Candidato ${filters.candidatoNumero}`}
+        cargo={filters.cargo}
+        ano={filters.ano}
+      />
+
+      <div className={`${styles.mapWrapper} ${sidebarCollapsed ? styles.mapWrapperExpanded : ''}`}>
         {loading && <div className={styles.spinner}>Carregando visualização...</div>}
 
         <Map
           points={mapData}
+          pontosEstrategicos={pontosEstrategicos}
           showHeatmap={filters.showHeatmap}
           showMarkers={filters.showMarkers}
           onSchoolClick={(id) => setSelectedSchoolId(id)}
@@ -214,6 +259,7 @@ function HomeContent() {
           schoolId={selectedSchoolId}
           onClose={() => setSelectedSchoolId(null)}
           selectedCandidateNum={filters.candidatoNumero}
+          selectedCargo={filters.cargo}
         />
       </div>
     </main>
@@ -221,15 +267,26 @@ function HomeContent() {
 }
 
 // Wrapper with Suspense for Vercel Build (SSR + searchParams)
-// Wrapper with Suspense for Vercel Build (SSR + searchParams)
-
 export default function Home() {
   return (
-    <Suspense fallback={<div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando App...</div>}>
+    <Suspense fallback={
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        fontSize: '18px',
+        fontWeight: '600'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🗳️</div>
+          Carregando Sistema de Inteligência Política...
+        </div>
+      </div>
+    }>
       <HomeContent />
     </Suspense>
   );
 }
-
-
-
