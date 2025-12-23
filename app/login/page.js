@@ -6,6 +6,14 @@ import styles from './login.module.css';
 
 const API_BASE = 'https://geral-mapadecalorapi.r954jc.easypanel.host';
 
+// Map Pin Icon
+const MapIcon = (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+        <circle cx="12" cy="10" r="3" />
+    </svg>
+);
+
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -22,7 +30,6 @@ export default function LoginPage() {
     useEffect(() => {
         const token = localStorage.getItem('mapaeleitoral_token');
         if (token) {
-            // Verify token is still valid
             fetch(`${API_BASE}/api/auth/verify`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,16 +78,15 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Credenciais inválidas');
             }
 
-            // Save token to localStorage
             if (data.token) {
                 localStorage.setItem('mapaeleitoral_token', data.token);
                 localStorage.setItem('mapaeleitoral_user', JSON.stringify(data.user));
             }
 
-            setSuccess('Login realizado com sucesso! Entrando...');
+            setSuccess('Login realizado com sucesso!');
             setTimeout(() => {
                 router.push('/mapa');
-            }, 800);
+            }, 600);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -91,9 +97,9 @@ export default function LoginPage() {
     if (checkingAuth) {
         return (
             <div className={styles.container}>
-                <div className={styles.loading}>
+                <div className={styles.loadingBox}>
                     <div className={styles.spinner}></div>
-                    <span>Verificando autenticação...</span>
+                    <span>Verificando...</span>
                 </div>
             </div>
         );
@@ -101,12 +107,10 @@ export default function LoginPage() {
 
     return (
         <div className={styles.container}>
-            <div className={styles.backgroundPattern}></div>
-
             <div className={styles.card}>
                 <div className={styles.cardHeader}>
                     <div className={styles.logo}>
-                        <span className={styles.logoIcon}>🗳️</span>
+                        <div className={styles.logoIcon}>{MapIcon}</div>
                         <h1>Mapa Eleitoral RJ</h1>
                     </div>
                     <p className={styles.subtitle}>
@@ -178,7 +182,7 @@ export default function LoginPage() {
             </div>
 
             <p className={styles.footer}>
-                Sistema de Inteligência Geográfica Política • Rio de Janeiro
+                Sistema de Inteligência Geográfica • Rio de Janeiro
             </p>
         </div>
     );
