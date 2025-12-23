@@ -68,7 +68,7 @@ function HomeContent() {
   const [mapData, setMapData] = useState([]);
   const [pontosEstrategicos, setPontosEstrategicos] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState({ totalVotos: 0, percentualGeral: 0, nome: '' });
+  const [stats, setStats] = useState({ totalVotos: 0, percentualGeral: 0, nome: '', totalLocais: 0, totalCandidatos: 0, totalZonas: 0 });
   const [activeLayer, setActiveLayer] = useState('streets');
 
   const [selectedSchoolId, setSelectedSchoolId] = useState(null);
@@ -211,10 +211,15 @@ function HomeContent() {
         const totalCargo = data.reduce((acc, curr) => acc + curr.total_local, 0);
         const percent = totalCargo > 0 ? ((total / totalCargo) * 100).toFixed(2) : 0;
 
+        // Calculate unique values for stats cards
+        const uniqueZonas = new Set(data.map(d => d.zona).filter(Boolean)).size;
+
         setStats({
           totalVotos: total ?? 0,
           percentualGeral: percent ?? 0,
-          nome: filters.candidatoNumero ? `Candidato ${filters.candidatoNumero}` : 'Todos os Locais'
+          nome: filters.candidatoNumero ? `Candidato ${filters.candidatoNumero}` : 'Todos os Locais',
+          totalLocais: data.length,
+          totalZonas: uniqueZonas
         });
 
         console.log(`🗳️ [${filters.ano}] Exibindo ${data.length} locais com ${total.toLocaleString()} votos do candidato ${filters.candidatoNumero} no mapa`);
@@ -244,6 +249,33 @@ function HomeContent() {
     }
     fetchPontos();
   }, []);
+
+  // Fetch total candidatos and selected candidate name
+  useEffect(() => {
+    async function fetchCandidatos() {
+      try {
+        const res = await fetch(`${API_BASE}/api/filtros?ano=${filters.ano}&cargo=${encodeURIComponent(filters.cargo)}`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setStats(prev => ({ ...prev, totalCandidatos: data.length }));
+
+          // Find selected candidate name
+          if (filters.candidatoNumero) {
+            const selectedCandidate = data.find(c => c.candidato_numero == filters.candidatoNumero);
+            if (selectedCandidate) {
+              setStats(prev => ({
+                ...prev,
+                nome: `${selectedCandidate.candidato_nome} (${selectedCandidate.partido_sigla})`
+              }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao buscar candidatos:', err);
+      }
+    }
+    fetchCandidatos();
+  }, [filters.ano, filters.cargo, filters.candidatoNumero]);
 
   // Show loading while checking auth
   if (checkingAuth || !isAuthenticated) {
